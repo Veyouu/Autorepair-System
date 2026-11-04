@@ -1,24 +1,18 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.event.TableModelEvent;
-import javax.swing.event.TableModelListener;
+import javax.swing.table.TableRowSorter;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 
 public class Services {
-    private DefaultTableModel appointmentModel = new DefaultTableModel();
-    private DefaultTableModel productModel = new DefaultTableModel();
-    private DefaultTableModel cartModel = new DefaultTableModel();
-    private DefaultTableModel billModel = new DefaultTableModel();
-    private DefaultTableModel transModel = new DefaultTableModel();
-
-    private int appointmentCount = 0;
-    private int billCount = 0;
-    private int receiptCount = 0;
+    private DefaultTableModel appointmentModel;
+    private DefaultTableModel productModel;
+    private DefaultTableModel cartModel;
+    private DefaultTableModel billModel;
+    private DefaultTableModel transModel;
 
     private JComboBox<String> appointmentServiceCMB;
     private JTextField appointmentVehicleTXT;
@@ -52,48 +46,33 @@ public class Services {
     private JScrollPane productCartTable;
 
     private AutomotivePasswords sharedCred;
-    private HashMap<Integer, Integer> serviceBillAppointmentRows = new HashMap<>();
+    private AutomotiveData sharedData;
+    private String currentClientName;
 
     public Services() {
         this(new AutomotivePasswords());
     }
 
     public Services(AutomotivePasswords sharedCred) {
+        this(sharedCred, sharedCred.getAutomotiveData());
+    }
+
+    public Services(AutomotivePasswords sharedCred, AutomotiveData sharedData) {
         this.sharedCred = sharedCred;
+        this.sharedData = sharedData;
+        currentClientName = sharedCred.getClientName();
+        if (currentClientName == null || currentClientName.trim().isEmpty()) {
+            currentClientName = sharedCred.getClientUsername();
+        }
+        if (currentClientName == null || currentClientName.trim().isEmpty()) {
+            currentClientName = "Client";
+        }
 
-        appointmentModel.addColumn("ID");
-        appointmentModel.addColumn("Service");
-        appointmentModel.addColumn("Vehicle");
-        appointmentModel.addColumn("Details");
-        appointmentModel.addColumn("Schedule");
-        appointmentModel.addColumn("Status");
-        appointmentModel.addColumn("Estimate");
-        appointmentModel.addColumn("Staff");
-
-        productModel.addColumn("ID");
-        productModel.addColumn("Product");
-        productModel.addColumn("Category");
-        productModel.addColumn("Price");
-        productModel.addColumn("Stock");
-
-        cartModel.addColumn("ID");
-        cartModel.addColumn("Product");
-        cartModel.addColumn("Qty");
-        cartModel.addColumn("Subtotal");
-
-        billModel.addColumn("Bill #");
-        billModel.addColumn("Type");
-        billModel.addColumn("Description");
-        billModel.addColumn("Amount");
-        billModel.addColumn("Approval Status");
-        billModel.addColumn("Payment Status");
-        billModel.addColumn("Date");
-
-        transModel.addColumn("Receipt #");
-        transModel.addColumn("Bill #");
-        transModel.addColumn("Amount");
-        transModel.addColumn("Method");
-        transModel.addColumn("Date");
+        appointmentModel = sharedData.getAppointmentModel();
+        productModel = sharedData.getProductModel();
+        cartModel = sharedData.getCartModel();
+        billModel = sharedData.getBillModel();
+        transModel = sharedData.getTransactionModel();
 
         table1.setModel(appointmentModel);
         table2.setModel(productModel);
@@ -101,50 +80,33 @@ public class Services {
         billingMyBillsTable.setModel(billModel);
         billingTransacRecordTable.setModel(transModel);
 
-        appointmentModel.addTableModelListener(new TableModelListener() {
+        final String clientFilter = currentClientName;
+        TableRowSorter<DefaultTableModel> appointmentSorter = new TableRowSorter<>(appointmentModel);
+        appointmentSorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
             @Override
-            public void tableChanged(TableModelEvent e) {
-                if (e.getType() == TableModelEvent.UPDATE && (e.getColumn() == 5 || e.getColumn() == TableModelEvent.ALL_COLUMNS)) {
-                    for (int i = 0; i < appointmentModel.getRowCount(); i++) {
-                        int appointmentRow = i;
-                        String status = appointmentModel.getValueAt(i, 5).toString();
-
-                        for (int j = 0; j < billModel.getRowCount(); j++) {
-                            if (billModel.getValueAt(j, 1).toString().equals("Service")) {
-                                int billNumber = Integer.parseInt(billModel.getValueAt(j, 0).toString());
-                                Integer linkedRow = serviceBillAppointmentRows.get(billNumber);
-
-                                if (linkedRow != null && linkedRow == appointmentRow) {
-                                    billModel.setValueAt(status, j, 4);
-                                }
-                            }
-                        }
-                    }
-                }
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                return clientFilter.equals(entry.getStringValue(1));
             }
         });
+        table1.setRowSorter(appointmentSorter);
 
-        String[][] products = {
-                {"1", "Engine Oil", "Fluids", "450.00", "50"},
-                {"2", "Oil Filter", "Parts", "225.00", "40"},
-                {"3", "Air Filter", "Parts", "375.00", "30"},
-                {"4", "Fuel Filter", "Parts", "225.00", "25"},
-                {"5", "Spark Plug", "Parts", "215.00", "60"},
-                {"6", "Brake Pads", "Parts", "725.00", "35"},
-                {"7", "Brake Shoes", "Parts", "450.00", "20"},
-                {"8", "Brake Fluid", "Fluids", "275.00", "45"},
-                {"9", "Motorcycle Tires", "Tires", "1600.00", "15"},
-                {"10", "Car Tires", "Tires", "4000.00", "20"},
-                {"11", "Batteries", "Electrical", "3100.00", "10"},
-                {"12", "Coolant", "Fluids", "325.00", "50"},
-                {"13", "Gear Oil", "Fluids", "235.00", "30"},
-                {"14", "Transmission Oil", "Fluids", "475.00", "25"},
-                {"15", "Motorcycle Chains", "Parts", "575.00", "18"}
-        };
+        TableRowSorter<DefaultTableModel> billSorter = new TableRowSorter<>(billModel);
+        billSorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                return clientFilter.equals(entry.getStringValue(1));
+            }
+        });
+        billingMyBillsTable.setRowSorter(billSorter);
 
-        for (String[] product : products) {
-            productModel.addRow(product);
-        }
+        TableRowSorter<DefaultTableModel> transactionSorter = new TableRowSorter<>(transModel);
+        transactionSorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                return clientFilter.equals(entry.getStringValue(2));
+            }
+        });
+        billingTransacRecordTable.setRowSorter(transactionSorter);
 
         SpinnerDateModel dateModel = new SpinnerDateModel(new Date(), null, null, Calendar.DAY_OF_MONTH);
         appointmentDateSPN.setModel(dateModel);
@@ -153,7 +115,6 @@ public class Services {
         productQuantitySPN.setModel(new SpinnerNumberModel(1, 1, 100, 1));
         productTotalTXT.setText("₱0.00");
         productTotalTXT.setEditable(false);
-        billingOutstandingBalanceTXT.setText("₱0.00");
         billingOutstandingBalanceTXT.setEditable(false);
 
         appointmentTimeSPN.setModel(new AbstractSpinnerModel() {
@@ -168,11 +129,9 @@ public class Services {
             public void setValue(Object value) {
                 if (value instanceof String) {
                     String[] timeParts = value.toString().split(":");
-
                     if (timeParts.length == 2) {
                         int hour = Integer.parseInt(timeParts[0]);
                         int minute = Integer.parseInt(timeParts[1]);
-
                         if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
                             currentMinutes = (hour * 60) + minute;
                             fireStateChanged();
@@ -240,7 +199,6 @@ public class Services {
                 }
 
                 AutomotiveService service;
-
                 if (serviceName.equals("Repair Services")) {
                     service = new RepairService();
                 } else if (serviceName.equals("Installation Services")) {
@@ -251,7 +209,6 @@ public class Services {
                 }
 
                 AppointmentDetails appointment = new AppointmentDetails(service, vehicle, problem);
-
                 if (!appointment.validateServiceRequest().equals("Valid Appointment")) {
                     JOptionPane.showMessageDialog(servicesPanel, appointment.validateServiceRequest(), "Error", JOptionPane.ERROR_MESSAGE);
                     return;
@@ -260,27 +217,30 @@ public class Services {
                 String date = new SimpleDateFormat("dd/MM/yyyy").format((Date) appointmentDateSPN.getValue());
                 String schedule = date + " " + time;
                 double estimate = appointment.getEstimatedPrice();
+                int appointmentID = sharedData.nextAppointmentID();
 
-                appointmentCount++;
                 appointmentModel.addRow(new Object[]{
-                        appointmentCount, appointment.getServiceName(), appointment.getVehicleInfo(),
-                        appointment.getServiceDetail(), schedule, "Pending", String.format("₱%.2f", estimate), "-"
+                        appointmentID, currentClientName, appointment.getServiceName(), appointment.getVehicleInfo(),
+                        appointment.getServiceDetail(), schedule, "Pending", String.format("₱%.2f", estimate)
                 });
 
-                billCount++;
+                int billID = sharedData.nextBillID();
+                String amount = String.format("₱%.2f", estimate);
+                String billDate = new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date());
+
                 billModel.addRow(new Object[]{
-                        billCount, "Service", serviceName + " - " + problem + " (" + vehicle + ")",
-                        String.format("₱%.2f", estimate), "Pending", "Unpaid",
-                        new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date())
+                        billID, currentClientName, "Service", serviceName + " - " + problem + " (" + vehicle + ")",
+                        amount, "Pending", "Unpaid", billDate
                 });
 
-                serviceBillAppointmentRows.put(billCount, appointmentModel.getRowCount() - 1);
+                sharedData.linkServiceBill(billID, appointmentID);
 
                 double balance = 0;
                 for (int i = 0; i < billModel.getRowCount(); i++) {
-                    if (billModel.getValueAt(i, 5).toString().equals("Unpaid")) {
-                        String amount = billModel.getValueAt(i, 3).toString().replace("₱", "").replace(",", "");
-                        balance += Double.parseDouble(amount);
+                    if (billModel.getValueAt(i, 1).toString().equals(currentClientName)
+                            && billModel.getValueAt(i, 6).toString().equals("Unpaid")) {
+                        String billAmount = billModel.getValueAt(i, 4).toString().replace("₱", "").replace(",", "");
+                        balance += Double.parseDouble(billAmount);
                     }
                 }
 
@@ -293,7 +253,6 @@ public class Services {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int selectedRow = table2.getSelectedRow();
-
                 if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(servicesPanel, "Select a product first.");
                     return;
@@ -314,7 +273,6 @@ public class Services {
 
                 OrderCalculator calculator = new OrderCalculator();
                 calculator.computeOrder(price, quantity);
-
                 cartModel.addRow(new Object[]{id, name, quantity, String.format("%.2f", calculator.getTotalAmount())});
                 productModel.setValueAt(stock - quantity, selectedRow, 4);
                 productTotalTXT.setText(String.format("₱%.2f", calculator.calculateCartTotal(cartModel)));
@@ -326,7 +284,6 @@ public class Services {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int selectedRow = table3.getSelectedRow();
-
                 if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(servicesPanel, "Select an item in the cart.");
                     return;
@@ -360,12 +317,11 @@ public class Services {
 
                 OrderCalculator calculator = new OrderCalculator();
                 double total = calculator.calculateCartTotal(cartModel);
+                int billID = sharedData.nextBillID();
 
-                billCount++;
                 billModel.addRow(new Object[]{
-                        billCount, "Product", "Product Order", String.format("₱%.2f", total),
-                        "Not Required", "Unpaid",
-                        new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date())
+                        billID, currentClientName, "Product", "Product Order", String.format("₱%.2f", total),
+                        "Not Required", "Unpaid", new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date())
                 });
 
                 cartModel.setRowCount(0);
@@ -373,8 +329,9 @@ public class Services {
 
                 double balance = 0;
                 for (int i = 0; i < billModel.getRowCount(); i++) {
-                    if (billModel.getValueAt(i, 5).toString().equals("Unpaid")) {
-                        String amount = billModel.getValueAt(i, 3).toString().replace("₱", "").replace(",", "");
+                    if (billModel.getValueAt(i, 1).toString().equals(currentClientName)
+                            && billModel.getValueAt(i, 6).toString().equals("Unpaid")) {
+                        String amount = billModel.getValueAt(i, 4).toString().replace("₱", "").replace(",", "");
                         balance += Double.parseDouble(amount);
                     }
                 }
@@ -388,20 +345,24 @@ public class Services {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int selectedRow = billingMyBillsTable.getSelectedRow();
-
                 if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(servicesPanel, "Select a bill first.");
                     return;
                 }
 
                 selectedRow = billingMyBillsTable.convertRowIndexToModel(selectedRow);
-
                 String billNumber = billModel.getValueAt(selectedRow, 0).toString();
-                String billType = billModel.getValueAt(selectedRow, 1).toString();
-                String description = billModel.getValueAt(selectedRow, 2).toString();
-                String amount = billModel.getValueAt(selectedRow, 3).toString();
-                String approvalStatus = billModel.getValueAt(selectedRow, 4).toString();
-                String paymentStatus = billModel.getValueAt(selectedRow, 5).toString();
+                String clientName = billModel.getValueAt(selectedRow, 1).toString();
+                String billType = billModel.getValueAt(selectedRow, 2).toString();
+                String description = billModel.getValueAt(selectedRow, 3).toString();
+                String amount = billModel.getValueAt(selectedRow, 4).toString();
+                String approvalStatus = billModel.getValueAt(selectedRow, 5).toString();
+                String paymentStatus = billModel.getValueAt(selectedRow, 6).toString();
+
+                if (!clientName.equals(currentClientName)) {
+                    JOptionPane.showMessageDialog(servicesPanel, "You can only pay your own bills.");
+                    return;
+                }
 
                 if (paymentStatus.equals("Paid")) {
                     JOptionPane.showMessageDialog(servicesPanel, "This bill has already been paid.");
@@ -409,15 +370,16 @@ public class Services {
                 }
 
                 if (billType.equals("Service")) {
-                    Integer appointmentRow = serviceBillAppointmentRows.get(Integer.parseInt(billNumber));
+                    Integer appointmentID = sharedData.getAppointmentIDForBill(Integer.parseInt(billNumber));
+                    String currentStatus = appointmentID == null ? null : sharedData.getAppointmentStatus(appointmentID);
 
-                    if (appointmentRow == null || appointmentRow >= appointmentModel.getRowCount()) {
+                    if (currentStatus == null) {
                         JOptionPane.showMessageDialog(servicesPanel, "The appointment record could not be found.");
                         return;
                     }
 
-                    approvalStatus = appointmentModel.getValueAt(appointmentRow, 5).toString();
-                    billModel.setValueAt(approvalStatus, selectedRow, 4);
+                    approvalStatus = currentStatus;
+                    billModel.setValueAt(approvalStatus, selectedRow, 5);
 
                     if (!approvalStatus.equals("Approved")) {
                         JOptionPane.showMessageDialog(
@@ -452,7 +414,6 @@ public class Services {
                     public void actionPerformed(ActionEvent e) {
                         String method = paymentMethodCMB.getSelectedItem().toString();
                         boolean cardPayment = method.equals("Debit") || method.equals("Credit");
-
                         cardNameTXT.setEnabled(cardPayment);
                         cardNumberTXT.setEnabled(cardPayment);
 
@@ -490,17 +451,17 @@ public class Services {
                     }
 
                     billingPaymentMethodCMB.setSelectedItem(selectedMethod);
-                    billModel.setValueAt("Paid", selectedRow, 5);
-                    receiptCount++;
+                    billModel.setValueAt("Paid", selectedRow, 6);
+
+                    int receiptID = sharedData.nextReceiptID();
                     String paymentDate = new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date());
-                    transModel.addRow(new Object[]{
-                            receiptCount, billNumber, amount, selectedMethod, paymentDate
-                    });
+                    transModel.addRow(new Object[]{receiptID, billNumber, clientName, amount, selectedMethod, paymentDate});
 
                     double balance = 0;
                     for (int i = 0; i < billModel.getRowCount(); i++) {
-                        if (billModel.getValueAt(i, 5).toString().equals("Unpaid")) {
-                            String unpaidAmount = billModel.getValueAt(i, 3).toString().replace("₱", "").replace(",", "");
+                        if (billModel.getValueAt(i, 1).toString().equals(currentClientName)
+                            && billModel.getValueAt(i, 6).toString().equals("Unpaid")) {
+                            String unpaidAmount = billModel.getValueAt(i, 4).toString().replace("₱", "").replace(",", "");
                             balance += Double.parseDouble(unpaidAmount);
                         }
                     }
@@ -510,8 +471,9 @@ public class Services {
                     JOptionPane.showMessageDialog(
                             servicesPanel,
                             "PAYMENT RECEIPT\n\n"
-                                    + "Receipt #: " + receiptCount
+                                    + "Receipt #: " + receiptID
                                     + "\nBill #: " + billNumber
+                                    + "\nClient: " + clientName
                                     + "\nBill Type: " + billType
                                     + "\nDescription: " + description
                                     + "\nApproval Status: " + approvalStatus
@@ -531,22 +493,21 @@ public class Services {
             @Override
             public void actionPerformed(ActionEvent e) {
                 int selectedRow = billingTransacRecordTable.getSelectedRow();
-
                 if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(servicesPanel, "Select a transaction first.");
                     return;
                 }
 
                 selectedRow = billingTransacRecordTable.convertRowIndexToModel(selectedRow);
-
                 JOptionPane.showMessageDialog(
                         servicesPanel,
                         "RECEIPT\n"
                                 + "Receipt #: " + transModel.getValueAt(selectedRow, 0)
                                 + "\nBill #: " + transModel.getValueAt(selectedRow, 1)
-                                + "\nAmount: " + transModel.getValueAt(selectedRow, 2)
-                                + "\nMethod: " + transModel.getValueAt(selectedRow, 3)
-                                + "\nDate: " + transModel.getValueAt(selectedRow, 4),
+                                + "\nClient: " + transModel.getValueAt(selectedRow, 2)
+                                + "\nAmount: " + transModel.getValueAt(selectedRow, 3)
+                                + "\nMethod: " + transModel.getValueAt(selectedRow, 4)
+                                + "\nDate: " + transModel.getValueAt(selectedRow, 5),
                         "Receipt",
                         JOptionPane.INFORMATION_MESSAGE
                 );
@@ -557,7 +518,6 @@ public class Services {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String search = productSearchTXT.getText().trim().toLowerCase();
-
                 if (search.isEmpty()) {
                     table2.clearSelection();
                     return;
