@@ -1,12 +1,13 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.time.LocalTime;
-import java.time.ZoneId;
+import java.util.HashMap;
 
 public class Services {
     private DefaultTableModel appointmentModel = new DefaultTableModel();
@@ -27,11 +28,6 @@ public class Services {
     private JButton appointmentSubmitAppBT;
     private JComboBox<String> appointmentProblemCMB;
     private JSpinner appointmentTimeSPN;
-
-    private JButton approveEstimateButton;
-    private JButton declineEstimateButton;
-    private JButton cancelEstimateButton;
-    private JButton refreshButton;
 
     private JSpinner productQuantitySPN;
     private JButton productAddToCartBT;
@@ -56,15 +52,13 @@ public class Services {
     private JScrollPane productCartTable;
 
     private AutomotivePasswords sharedCred;
-    private Timer philippinesTimeTimer;
-    private int lastSyncedMinutes = -1;
+    private HashMap<Integer, Integer> serviceBillAppointmentRows = new HashMap<>();
 
     public Services() {
         this(new AutomotivePasswords());
     }
 
     public Services(AutomotivePasswords sharedCred) {
-
         this.sharedCred = sharedCred;
 
         appointmentModel.addColumn("ID");
@@ -91,7 +85,8 @@ public class Services {
         billModel.addColumn("Type");
         billModel.addColumn("Description");
         billModel.addColumn("Amount");
-        billModel.addColumn("Status");
+        billModel.addColumn("Approval Status");
+        billModel.addColumn("Payment Status");
         billModel.addColumn("Date");
 
         transModel.addColumn("Receipt #");
@@ -105,6 +100,29 @@ public class Services {
         table3.setModel(cartModel);
         billingMyBillsTable.setModel(billModel);
         billingTransacRecordTable.setModel(transModel);
+
+        appointmentModel.addTableModelListener(new TableModelListener() {
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                if (e.getType() == TableModelEvent.UPDATE && (e.getColumn() == 5 || e.getColumn() == TableModelEvent.ALL_COLUMNS)) {
+                    for (int i = 0; i < appointmentModel.getRowCount(); i++) {
+                        int appointmentRow = i;
+                        String status = appointmentModel.getValueAt(i, 5).toString();
+
+                        for (int j = 0; j < billModel.getRowCount(); j++) {
+                            if (billModel.getValueAt(j, 1).toString().equals("Service")) {
+                                int billNumber = Integer.parseInt(billModel.getValueAt(j, 0).toString());
+                                Integer linkedRow = serviceBillAppointmentRows.get(billNumber);
+
+                                if (linkedRow != null && linkedRow == appointmentRow) {
+                                    billModel.setValueAt(status, j, 4);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
         String[][] products = {
                 {"1", "Engine Oil", "Fluids", "450.00", "50"},
@@ -128,54 +146,35 @@ public class Services {
             productModel.addRow(product);
         }
 
-        SpinnerDateModel dateModel = new SpinnerDateModel(
-                new Date(), null, null, Calendar.DAY_OF_MONTH
-        );
-
+        SpinnerDateModel dateModel = new SpinnerDateModel(new Date(), null, null, Calendar.DAY_OF_MONTH);
         appointmentDateSPN.setModel(dateModel);
-        appointmentDateSPN.setEditor(
-                new JSpinner.DateEditor(appointmentDateSPN, "dd/MM/yyyy")
-        );
+        appointmentDateSPN.setEditor(new JSpinner.DateEditor(appointmentDateSPN, "dd/MM/yyyy"));
 
         productQuantitySPN.setModel(new SpinnerNumberModel(1, 1, 100, 1));
-
         productTotalTXT.setText("₱0.00");
         productTotalTXT.setEditable(false);
-
         billingOutstandingBalanceTXT.setText("₱0.00");
         billingOutstandingBalanceTXT.setEditable(false);
 
-        LocalTime initialTime = LocalTime.now(ZoneId.of("Asia/Manila"));
-
-        lastSyncedMinutes = initialTime.getHour() * 60 + initialTime.getMinute();
-
         appointmentTimeSPN.setModel(new AbstractSpinnerModel() {
-
-            private int currentMinutes = initialTime.getHour() * 60 + initialTime.getMinute();
+            private int currentMinutes = (8 * 60) + 30;
 
             @Override
             public Object getValue() {
-                int hour = currentMinutes / 60;
-                int minute = currentMinutes % 60;
-
-                return String.format("%02d:%02d", hour, minute);
+                return String.format("%02d:%02d", currentMinutes / 60, currentMinutes % 60);
             }
 
             @Override
             public void setValue(Object value) {
                 if (value instanceof String) {
-
                     String[] timeParts = value.toString().split(":");
 
                     if (timeParts.length == 2) {
-
                         int hour = Integer.parseInt(timeParts[0]);
                         int minute = Integer.parseInt(timeParts[1]);
 
                         if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-
                             currentMinutes = (hour * 60) + minute;
-
                             fireStateChanged();
                         }
                     }
@@ -184,212 +183,115 @@ public class Services {
 
             @Override
             public Object getNextValue() {
-                int nextMinutes = (currentMinutes + 5) % 1440;
-
-                int hour = nextMinutes / 60;
-                int minute = nextMinutes % 60;
-
-                return String.format("%02d:%02d", hour, minute);
+                int nextMinutes = (currentMinutes + 30) % 1440;
+                return String.format("%02d:%02d", nextMinutes / 60, nextMinutes % 60);
             }
 
             @Override
             public Object getPreviousValue() {
-                int previousMinutes = (currentMinutes - 5 + 1440) % 1440;
-
-                int hour = previousMinutes / 60;
-                int minute = previousMinutes % 60;
-
-                return String.format("%02d:%02d", hour, minute);
+                int previousMinutes = (currentMinutes - 30 + 1440) % 1440;
+                return String.format("%02d:%02d", previousMinutes / 60, previousMinutes % 60);
             }
         });
 
         appointmentTimeSPN.setEditor(new JSpinner.DefaultEditor(appointmentTimeSPN));
         ((JSpinner.DefaultEditor) appointmentTimeSPN.getEditor()).getTextField().setEditable(false);
 
-        philippinesTimeTimer = new Timer(1000, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-
-                LocalTime currentTime = LocalTime.now(ZoneId.of("Asia/Manila"));
-
-                int currentMinutes = currentTime.getHour() * 60 + currentTime.getMinute();
-
-                if (currentMinutes != lastSyncedMinutes) {
-
-                    lastSyncedMinutes = currentMinutes;
-
-                    appointmentTimeSPN.setValue(String.format(
-                            "%02d:%02d",
-                            currentTime.getHour(),
-                            currentTime.getMinute()
-                    ));
-                }
-            }
-        });
-
-        philippinesTimeTimer.start();
-
         appointmentServiceCMB.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 String selectedService = (String) appointmentServiceCMB.getSelectedItem();
 
                 if (selectedService == null) {
-
                     appointmentProblemCMB.setModel(new DefaultComboBoxModel<String>());
-
                 } else if (selectedService.equals("Repair Services")) {
-
                     RepairService repairService = new RepairService();
-
-                    appointmentProblemCMB.setModel(
-                            new DefaultComboBoxModel<String>(repairService.getServiceDetails())
-                    );
-
+                    appointmentProblemCMB.setModel(new DefaultComboBoxModel<String>(repairService.getServiceDetails()));
                 } else if (selectedService.equals("Installation Services")) {
-
                     InstallationService installationService = new InstallationService();
-
-                    appointmentProblemCMB.setModel(
-                            new DefaultComboBoxModel<String>(installationService.getServiceDetails())
-                    );
-
+                    appointmentProblemCMB.setModel(new DefaultComboBoxModel<String>(installationService.getServiceDetails()));
                 } else {
-
                     appointmentProblemCMB.setModel(new DefaultComboBoxModel<String>());
                 }
             }
         });
 
         if (appointmentServiceCMB.getSelectedItem() != null) {
-
             if (appointmentServiceCMB.getSelectedItem().equals("Repair Services")) {
-
                 RepairService repairService = new RepairService();
-
-                appointmentProblemCMB.setModel(
-                        new DefaultComboBoxModel<String>(repairService.getServiceDetails())
-                );
-
+                appointmentProblemCMB.setModel(new DefaultComboBoxModel<String>(repairService.getServiceDetails()));
             } else if (appointmentServiceCMB.getSelectedItem().equals("Installation Services")) {
-
                 InstallationService installationService = new InstallationService();
-
-                appointmentProblemCMB.setModel(
-                        new DefaultComboBoxModel<String>(installationService.getServiceDetails())
-                );
+                appointmentProblemCMB.setModel(new DefaultComboBoxModel<String>(installationService.getServiceDetails()));
             }
         }
 
         appointmentSubmitAppBT.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 String serviceName = (String) appointmentServiceCMB.getSelectedItem();
                 String vehicle = appointmentVehicleTXT.getText().trim();
                 String problem = (String) appointmentProblemCMB.getSelectedItem();
                 String time = appointmentTimeSPN.getValue().toString();
 
                 if (serviceName == null || problem == null || vehicle.isEmpty()) {
-                    JOptionPane.showMessageDialog(
-                            servicesPanel,
-                            "Please complete all appointment details.",
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                    JOptionPane.showMessageDialog(servicesPanel, "Please complete all appointment details.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
 
                 AutomotiveService service;
 
                 if (serviceName.equals("Repair Services")) {
-
                     service = new RepairService();
-
                 } else if (serviceName.equals("Installation Services")) {
-
                     service = new InstallationService();
-
                 } else {
-
-                    JOptionPane.showMessageDialog(
-                            servicesPanel,
-                            "Please select a valid service.",
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                    JOptionPane.showMessageDialog(servicesPanel, "Please select a valid service.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
 
                 AppointmentDetails appointment = new AppointmentDetails(service, vehicle, problem);
 
                 if (!appointment.validateServiceRequest().equals("Valid Appointment")) {
-                    JOptionPane.showMessageDialog(
-                            servicesPanel,
-                            appointment.validateServiceRequest(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                    JOptionPane.showMessageDialog(servicesPanel, appointment.validateServiceRequest(), "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
 
-                String date = new SimpleDateFormat("dd/MM/yyyy").format(
-                        (Date) appointmentDateSPN.getValue()
-                );
-
+                String date = new SimpleDateFormat("dd/MM/yyyy").format((Date) appointmentDateSPN.getValue());
                 String schedule = date + " " + time;
                 double estimate = appointment.getEstimatedPrice();
 
                 appointmentCount++;
-
                 appointmentModel.addRow(new Object[]{
-                        appointmentCount,
-                        appointment.getServiceName(),
-                        appointment.getVehicleInfo(),
-                        appointment.getServiceDetail(),
-                        schedule,
-                        "Pending",
-                        String.format("₱%.2f", estimate),
-                        "-"
+                        appointmentCount, appointment.getServiceName(), appointment.getVehicleInfo(),
+                        appointment.getServiceDetail(), schedule, "Pending", String.format("₱%.2f", estimate), "-"
                 });
 
                 billCount++;
-
                 billModel.addRow(new Object[]{
-                        billCount,
-                        "Service",
-                        serviceName + " - " + problem + " (" + vehicle + ")",
-                        String.format("₱%.2f", estimate),
-                        "Unpaid",
+                        billCount, "Service", serviceName + " - " + problem + " (" + vehicle + ")",
+                        String.format("₱%.2f", estimate), "Pending", "Unpaid",
                         new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date())
                 });
 
+                serviceBillAppointmentRows.put(billCount, appointmentModel.getRowCount() - 1);
+
                 double balance = 0;
-
                 for (int i = 0; i < billModel.getRowCount(); i++) {
-                    if (billModel.getValueAt(i, 4).toString().equals("Unpaid")) {
-
-                        String amount = billModel.getValueAt(i, 3).toString()
-                                .replace("₱", "").replace(",", "");
-
+                    if (billModel.getValueAt(i, 5).toString().equals("Unpaid")) {
+                        String amount = billModel.getValueAt(i, 3).toString().replace("₱", "").replace(",", "");
                         balance += Double.parseDouble(amount);
                     }
                 }
 
                 billingOutstandingBalanceTXT.setText(String.format("₱%.2f", balance));
-
-                JOptionPane.showMessageDialog(
-                        servicesPanel,
-                        "Appointment submitted successfully!"
-                );
+                JOptionPane.showMessageDialog(servicesPanel, "Appointment submitted successfully!\nPlease wait for admin approval before payment.");
             }
         });
 
         productAddToCartBT.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 int selectedRow = table2.getSelectedRow();
 
                 if (selectedRow == -1) {
@@ -398,7 +300,6 @@ public class Services {
                 }
 
                 selectedRow = table2.convertRowIndexToModel(selectedRow);
-
                 int quantity = (Integer) productQuantitySPN.getValue();
                 int stock = Integer.parseInt(productModel.getValueAt(selectedRow, 4).toString());
 
@@ -414,18 +315,9 @@ public class Services {
                 OrderCalculator calculator = new OrderCalculator();
                 calculator.computeOrder(price, quantity);
 
-                cartModel.addRow(new Object[]{
-                        id,
-                        name,
-                        quantity,
-                        String.format("%.2f", calculator.getTotalAmount())
-                });
-
+                cartModel.addRow(new Object[]{id, name, quantity, String.format("%.2f", calculator.getTotalAmount())});
                 productModel.setValueAt(stock - quantity, selectedRow, 4);
-
-                double total = calculator.calculateCartTotal(cartModel);
-                productTotalTXT.setText(String.format("₱%.2f", total));
-
+                productTotalTXT.setText(String.format("₱%.2f", calculator.calculateCartTotal(cartModel)));
                 productQuantitySPN.setValue(1);
             }
         });
@@ -433,7 +325,6 @@ public class Services {
         productRemoveBT.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 int selectedRow = table3.getSelectedRow();
 
                 if (selectedRow == -1) {
@@ -442,34 +333,26 @@ public class Services {
                 }
 
                 selectedRow = table3.convertRowIndexToModel(selectedRow);
-
                 String id = cartModel.getValueAt(selectedRow, 0).toString();
                 int quantity = Integer.parseInt(cartModel.getValueAt(selectedRow, 2).toString());
 
                 for (int i = 0; i < productModel.getRowCount(); i++) {
                     if (productModel.getValueAt(i, 0).toString().equals(id)) {
-
                         int stock = Integer.parseInt(productModel.getValueAt(i, 4).toString());
-
                         productModel.setValueAt(stock + quantity, i, 4);
                         break;
                     }
                 }
 
                 cartModel.removeRow(selectedRow);
-
                 OrderCalculator calculator = new OrderCalculator();
-
-                productTotalTXT.setText(
-                        String.format("₱%.2f", calculator.calculateCartTotal(cartModel))
-                );
+                productTotalTXT.setText(String.format("₱%.2f", calculator.calculateCartTotal(cartModel)));
             }
         });
 
         productConfirmProdOrderBT.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 if (cartModel.getRowCount() == 0) {
                     JOptionPane.showMessageDialog(servicesPanel, "Your cart is empty.");
                     return;
@@ -479,13 +362,9 @@ public class Services {
                 double total = calculator.calculateCartTotal(cartModel);
 
                 billCount++;
-
                 billModel.addRow(new Object[]{
-                        billCount,
-                        "Product",
-                        "Product Order",
-                        String.format("₱%.2f", total),
-                        "Unpaid",
+                        billCount, "Product", "Product Order", String.format("₱%.2f", total),
+                        "Not Required", "Unpaid",
                         new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date())
                 });
 
@@ -493,27 +372,21 @@ public class Services {
                 productTotalTXT.setText("₱0.00");
 
                 double balance = 0;
-
                 for (int i = 0; i < billModel.getRowCount(); i++) {
-                    if (billModel.getValueAt(i, 4).toString().equals("Unpaid")) {
-
-                        String amount = billModel.getValueAt(i, 3).toString()
-                                .replace("₱", "").replace(",", "");
-
+                    if (billModel.getValueAt(i, 5).toString().equals("Unpaid")) {
+                        String amount = billModel.getValueAt(i, 3).toString().replace("₱", "").replace(",", "");
                         balance += Double.parseDouble(amount);
                     }
                 }
 
                 billingOutstandingBalanceTXT.setText(String.format("₱%.2f", balance));
-
-                JOptionPane.showMessageDialog(servicesPanel, "Product order confirmed!");
+                JOptionPane.showMessageDialog(servicesPanel, "Product order confirmed!\nYou can pay for this product order immediately.");
             }
         });
 
         billingReviewBillBT.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 int selectedRow = billingMyBillsTable.getSelectedRow();
 
                 if (selectedRow == -1) {
@@ -523,41 +396,61 @@ public class Services {
 
                 selectedRow = billingMyBillsTable.convertRowIndexToModel(selectedRow);
 
-                if (billModel.getValueAt(selectedRow, 4).toString().equals("Paid")) {
+                String billNumber = billModel.getValueAt(selectedRow, 0).toString();
+                String billType = billModel.getValueAt(selectedRow, 1).toString();
+                String description = billModel.getValueAt(selectedRow, 2).toString();
+                String amount = billModel.getValueAt(selectedRow, 3).toString();
+                String approvalStatus = billModel.getValueAt(selectedRow, 4).toString();
+                String paymentStatus = billModel.getValueAt(selectedRow, 5).toString();
+
+                if (paymentStatus.equals("Paid")) {
                     JOptionPane.showMessageDialog(servicesPanel, "This bill has already been paid.");
                     return;
                 }
 
-                String billNumber = billModel.getValueAt(selectedRow, 0).toString();
-                String amount = billModel.getValueAt(selectedRow, 3).toString();
+                if (billType.equals("Service")) {
+                    Integer appointmentRow = serviceBillAppointmentRows.get(Integer.parseInt(billNumber));
 
-                JComboBox<String> paymentMethodCMB = new JComboBox<>(
-                        new String[]{"Cash", "Debit", "Credit"}
-                );
+                    if (appointmentRow == null || appointmentRow >= appointmentModel.getRowCount()) {
+                        JOptionPane.showMessageDialog(servicesPanel, "The appointment record could not be found.");
+                        return;
+                    }
 
+                    approvalStatus = appointmentModel.getValueAt(appointmentRow, 5).toString();
+                    billModel.setValueAt(approvalStatus, selectedRow, 4);
+
+                    if (!approvalStatus.equals("Approved")) {
+                        JOptionPane.showMessageDialog(
+                                servicesPanel,
+                                "Payment is not available yet.\n\nYour service appointment must be approved by the admin first.\nCurrent Approval Status: " + approvalStatus,
+                                "Admin Approval Required",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return;
+                    }
+                } else if (!billType.equals("Product")) {
+                    JOptionPane.showMessageDialog(servicesPanel, "This bill type cannot be paid.");
+                    return;
+                }
+
+                JComboBox<String> paymentMethodCMB = new JComboBox<>(new String[]{"Cash", "Debit", "Credit"});
                 JTextField cardNameTXT = new JTextField();
                 JTextField cardNumberTXT = new JTextField();
-
                 JPanel paymentPanel = new JPanel(new java.awt.GridLayout(4, 2, 8, 8));
 
                 paymentPanel.add(new JLabel("Payment Amount:"));
                 paymentPanel.add(new JLabel(amount));
-
                 paymentPanel.add(new JLabel("Payment Method:"));
                 paymentPanel.add(paymentMethodCMB);
-
                 paymentPanel.add(new JLabel("Cardholder Name:"));
                 paymentPanel.add(cardNameTXT);
-
                 paymentPanel.add(new JLabel("Card Number:"));
                 paymentPanel.add(cardNumberTXT);
 
                 paymentMethodCMB.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-
                         String method = paymentMethodCMB.getSelectedItem().toString();
-
                         boolean cardPayment = method.equals("Debit") || method.equals("Credit");
 
                         cardNameTXT.setEnabled(cardPayment);
@@ -573,83 +466,63 @@ public class Services {
                 cardNameTXT.setEnabled(false);
                 cardNumberTXT.setEnabled(false);
 
-                int choice = JOptionPane.showConfirmDialog(
-                        servicesPanel,
-                        paymentPanel,
-                        "Payment",
-                        JOptionPane.OK_CANCEL_OPTION,
-                        JOptionPane.PLAIN_MESSAGE
-                );
+                int choice = JOptionPane.showConfirmDialog(servicesPanel, paymentPanel, "Payment", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
                 if (choice == JOptionPane.OK_OPTION) {
-
                     OrderCalculator calculator = new OrderCalculator();
                     String selectedMethod = paymentMethodCMB.getSelectedItem().toString();
 
-                    if (!calculator.validatePayment(
-                            selectedMethod,
-                            cardNameTXT.getText(),
-                            cardNumberTXT.getText()
-                    )) {
-
+                    if (!calculator.validatePayment(selectedMethod, cardNameTXT.getText(), cardNumberTXT.getText())) {
                         if (selectedMethod.equals("Debit") || selectedMethod.equals("Credit")) {
-
-                            if (cardNameTXT.getText().trim().isEmpty()
-                                    || cardNumberTXT.getText().trim().isEmpty()) {
-
-                                JOptionPane.showMessageDialog(
-                                        servicesPanel,
-                                        "Please enter the cardholder name and card number."
-                                );
-
+                            if (cardNameTXT.getText().trim().isEmpty() || cardNumberTXT.getText().trim().isEmpty()) {
+                                JOptionPane.showMessageDialog(servicesPanel, "Please enter the cardholder name and card number.");
                             } else {
-
-                                JOptionPane.showMessageDialog(
-                                        servicesPanel,
-                                        "Please enter a valid card number."
-                                );
+                                JOptionPane.showMessageDialog(servicesPanel, "Please enter a valid card number.");
                             }
                         }
-
                         return;
                     }
 
                     if (selectedMethod.equals("Debit")) {
                         selectedMethod = "Debit Card";
-
                     } else if (selectedMethod.equals("Credit")) {
                         selectedMethod = "Credit Card";
                     }
 
                     billingPaymentMethodCMB.setSelectedItem(selectedMethod);
-
-                    billModel.setValueAt("Paid", selectedRow, 4);
-
+                    billModel.setValueAt("Paid", selectedRow, 5);
                     receiptCount++;
-
+                    String paymentDate = new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date());
                     transModel.addRow(new Object[]{
-                            receiptCount,
-                            billNumber,
-                            amount,
-                            selectedMethod,
-                            new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date())
+                            receiptCount, billNumber, amount, selectedMethod, paymentDate
                     });
 
                     double balance = 0;
-
                     for (int i = 0; i < billModel.getRowCount(); i++) {
-                        if (billModel.getValueAt(i, 4).toString().equals("Unpaid")) {
-
-                            String unpaidAmount = billModel.getValueAt(i, 3).toString()
-                                    .replace("₱", "").replace(",", "");
-
+                        if (billModel.getValueAt(i, 5).toString().equals("Unpaid")) {
+                            String unpaidAmount = billModel.getValueAt(i, 3).toString().replace("₱", "").replace(",", "");
                             balance += Double.parseDouble(unpaidAmount);
                         }
                     }
 
                     billingOutstandingBalanceTXT.setText(String.format("₱%.2f", balance));
 
-                    JOptionPane.showMessageDialog(servicesPanel, "Payment successful!");
+                    JOptionPane.showMessageDialog(
+                            servicesPanel,
+                            "PAYMENT RECEIPT\n\n"
+                                    + "Receipt #: " + receiptCount
+                                    + "\nBill #: " + billNumber
+                                    + "\nBill Type: " + billType
+                                    + "\nDescription: " + description
+                                    + "\nApproval Status: " + approvalStatus
+                                    + "\nPayment Status: Paid"
+                                    + "\nAmount Paid: " + amount
+                                    + "\nPayment Method: " + selectedMethod
+                                    + "\nPayment Date: " + paymentDate
+                                    + "\n\nPayment successful!",
+                            "Payment Receipt",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
                 }
             }
         });
@@ -657,7 +530,6 @@ public class Services {
         billingViewRecieptBT.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 int selectedRow = billingTransacRecordTable.getSelectedRow();
 
                 if (selectedRow == -1) {
@@ -678,77 +550,6 @@ public class Services {
                         "Receipt",
                         JOptionPane.INFORMATION_MESSAGE
                 );
-            }
-        });
-
-        approveEstimateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int selectedRow = table1.getSelectedRow();
-
-                if (selectedRow == -1) {
-                    JOptionPane.showMessageDialog(servicesPanel, "Select an appointment first.");
-                    return;
-                }
-
-                selectedRow = table1.convertRowIndexToModel(selectedRow);
-
-                appointmentModel.setValueAt("Approved", selectedRow, 5);
-
-                JOptionPane.showMessageDialog(servicesPanel, "Appointment approved.");
-            }
-        });
-
-        declineEstimateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int selectedRow = table1.getSelectedRow();
-                if (selectedRow == -1) {
-                    JOptionPane.showMessageDialog(servicesPanel, "Select an appointment first.");
-                    return;
-                }
-
-                selectedRow = table1.convertRowIndexToModel(selectedRow);
-                appointmentModel.setValueAt("Declined", selectedRow, 5);
-                JOptionPane.showMessageDialog(servicesPanel, "Appointment declined.");
-            }
-        });
-
-        cancelEstimateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int selectedRow = table1.getSelectedRow();
-
-                if (selectedRow == -1) {
-                    JOptionPane.showMessageDialog(servicesPanel, "Select an appointment first.");
-                    return;
-                }
-
-                selectedRow = table1.convertRowIndexToModel(selectedRow);
-                appointmentModel.setValueAt("Cancelled", selectedRow, 5);
-                JOptionPane.showMessageDialog(servicesPanel, "Appointment cancelled.");
-            }
-        });
-
-        refreshButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                OrderCalculator calculator = new OrderCalculator();
-
-                productTotalTXT.setText(String.format("₱%.2f", calculator.calculateCartTotal(cartModel)));
-
-                double balance = 0;
-
-                for (int i = 0; i < billModel.getRowCount(); i++) {
-                    if (billModel.getValueAt(i, 4).toString().equals("Unpaid")) {
-                        String amount = billModel.getValueAt(i, 3).toString().replace("₱", "").replace(",", "");
-                        balance += Double.parseDouble(amount);
-                    }
-                }
-
-                billingOutstandingBalanceTXT.setText(String.format("₱%.2f", balance));
-
-                JOptionPane.showMessageDialog(servicesPanel, "System data refreshed.");
             }
         });
 
@@ -775,7 +576,6 @@ public class Services {
                 }
 
                 table2.clearSelection();
-
                 JOptionPane.showMessageDialog(servicesPanel, "Product not found.");
             }
         });
@@ -786,10 +586,6 @@ public class Services {
                 int choice = JOptionPane.showConfirmDialog(servicesPanel, "Are you sure you want to log out?", "Confirm Logout", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
                 if (choice == JOptionPane.YES_OPTION) {
-                    if (philippinesTimeTimer != null) {
-                        philippinesTimeTimer.stop();
-                    }
-
                     JFrame servicesFrame = (JFrame) SwingUtilities.getWindowAncestor(servicesPanel);
                     AutomotiveServiceLogin login = new AutomotiveServiceLogin(sharedCred);
                     JFrame loginFrame = new JFrame("AutoCare Pro - Login");
@@ -798,7 +594,6 @@ public class Services {
                     loginFrame.pack();
                     loginFrame.setLocationRelativeTo(null);
                     loginFrame.setVisible(true);
-
                     if (servicesFrame != null) {
                         servicesFrame.dispose();
                     }
