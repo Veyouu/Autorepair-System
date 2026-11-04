@@ -2,6 +2,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 public class AdminPanel {
     private JTabbedPane tabbedPane1;
@@ -55,6 +57,26 @@ public class AdminPanel {
         tblProdMasterList.setModel(productMasterlistTable);
         tblTransactionRecords.setModel(transactionRecordsTable);
         tblAdminBillHistory.setModel(billingRecordsTable);
+        hideTableColumn(tblClientAppointmentMastList, 8);
+        hideTableColumn(tblAdminBillHistory, 8);
+        hideTableColumn(tblTransactionRecords, 6);
+
+        // Selecting a product automatically loads its values into the edit fields.
+        tblProdMasterList.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                if (e.getValueIsAdjusting()) return;
+
+                int selectedRow = tblProdMasterList.getSelectedRow();
+                if (selectedRow == -1) return;
+
+                selectedRow = tblProdMasterList.convertRowIndexToModel(selectedRow);
+                txtProdName.setText(productMasterlistTable.getValueAt(selectedRow, 1).toString());
+                txtProdCat.setText(productMasterlistTable.getValueAt(selectedRow, 2).toString());
+                txtProdPrice.setText(productMasterlistTable.getValueAt(selectedRow, 3).toString());
+                txtProdStock.setText(productMasterlistTable.getValueAt(selectedRow, 4).toString());
+            }
+        });
 
         btnConfirmApp.addActionListener(new ActionListener() {
             @Override
@@ -278,6 +300,10 @@ public class AdminPanel {
 
                 int row = tblProdMasterList.convertRowIndexToModel(selectedRow);
                 productMasterlistTable.removeRow(row);
+                txtProdName.setText("");
+                txtProdCat.setText("");
+                txtProdPrice.setText("");
+                txtProdStock.setText("");
             }
         });
 
@@ -292,4 +318,12 @@ public class AdminPanel {
             }
         });
     }
+
+    private void hideTableColumn(JTable table, int modelColumn) {
+        int viewColumn = table.convertColumnIndexToView(modelColumn);
+        if (viewColumn >= 0) {
+            table.removeColumn(table.getColumnModel().getColumn(viewColumn));
+        }
+    }
+
 }

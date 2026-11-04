@@ -18,35 +18,39 @@ public class AutomotiveClientInfo {
         btnSignUp.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                pass = txtPass.getText();
-                rePass = txtRePass.getText();
-                user = txtUser.getText();
-                name = txtName.getText();
+                pass = new String(txtPass.getPassword());
+                rePass = new String(txtRePass.getPassword());
+                user = txtUser.getText().trim();
+                name = txtName.getText().trim();
 
-                if(pass.isEmpty() || rePass.isEmpty() || user.isEmpty() || name.isEmpty()){
-                    JOptionPane.showMessageDialog(null, "Fill out all blanks!", "Missing Information", JOptionPane.WARNING_MESSAGE);
-                } else if(!pass.equals(rePass)){
-                    JOptionPane.showMessageDialog(null, "Passwords do not match!", "Incorrect Password", JOptionPane.WARNING_MESSAGE);
+                if (pass.trim().isEmpty() || rePass.trim().isEmpty() || user.isEmpty() || name.isEmpty()) {
+                    JOptionPane.showMessageDialog(registerPanel, "Fill out all blanks!", "Missing Information", JOptionPane.WARNING_MESSAGE);
                     return;
-                }else{
-                    clientInfo.setClientUsername(user);
-                    clientInfo.setClientPass(pass);
-                    clientInfo.setClientName(name);
-
-                    if(clientInfo.checkClientCred(clientInfo.getClientUsername(), clientInfo.getClientPass(), clientInfo.getClientName())==1){
-                        return;
-                    };
+                }
+                if (!pass.equals(rePass)) {
+                    JOptionPane.showMessageDialog(registerPanel, "Passwords do not match!", "Incorrect Password", JOptionPane.WARNING_MESSAGE);
+                    return;
                 }
 
-                try{
+                clientInfo.setClientUsername(user);
+                clientInfo.setClientPass(pass);
+                clientInfo.setClientName(name);
+
+                // Adds exactly one complete account row to clientCredList's Vector.
+                if (clientInfo.checkClientCred(user, pass, name) != 0) {
+                    return;
+                }
+
+                try {
                     JFrame loginFrame = new JFrame("Login");
                     AutomotiveServiceLogin loginPanel = new AutomotiveServiceLogin(clientInfo);
-
                     JPanel panel = loginPanel.getMainPanel();
-                    if (panel==null) {
+
+                    if (panel == null) {
                         JOptionPane.showMessageDialog(null, "Error: getMainPanel() returned null. Check AutomotiveServiceLogin.java!", "Null Panel Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
+
                     loginFrame.setContentPane(panel);
                     loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                     loginFrame.pack();
@@ -54,26 +58,26 @@ public class AutomotiveClientInfo {
                     loginFrame.setVisible(true);
 
                     JFrame currentFrame = (JFrame) SwingUtilities.getWindowAncestor(registerPanel);
-                    if (currentFrame != null) {
-                        currentFrame.dispose();
-                    }
-                } catch(Exception ex){
+                    if (currentFrame != null) currentFrame.dispose();
+                } catch (Exception ex) {
                     ex.printStackTrace();
+                    JOptionPane.showMessageDialog(registerPanel, "Unable to open the login screen: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
+
         btnCancel.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                try{
+                try {
                     JFrame loginFrame = new JFrame("Login");
                     AutomotiveServiceLogin loginPanel = new AutomotiveServiceLogin(clientInfo);
-
                     JPanel panel = loginPanel.getMainPanel();
-                    if (panel==null) {
+                    if (panel == null) {
                         JOptionPane.showMessageDialog(null, "Error: getMainPanel() returned null. Check AutomotiveServiceLogin.java!", "Null Panel Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
+
                     loginFrame.setContentPane(panel);
                     loginFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                     loginFrame.pack();
@@ -81,17 +85,13 @@ public class AutomotiveClientInfo {
                     loginFrame.setVisible(true);
 
                     JFrame currentFrame = (JFrame) SwingUtilities.getWindowAncestor(registerPanel);
-                    if (currentFrame != null) {
-                        currentFrame.dispose();
-                    }
-                } catch(Exception ex){
+                    if (currentFrame != null) currentFrame.dispose();
+                } catch (Exception ex) {
                     ex.printStackTrace();
                 }
             }
         });
     }
 
-    public JPanel getRegisterPanel(){
-        return registerPanel;
-    }
+    public JPanel getRegisterPanel() { return registerPanel; }
 }

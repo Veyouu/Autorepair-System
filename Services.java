@@ -48,6 +48,7 @@ public class Services {
     private AutomotivePasswords sharedCred;
     private AutomotiveData sharedData;
     private String currentClientName;
+    private String currentClientUsername;
 
     public Services() {
         this(new AutomotivePasswords());
@@ -60,17 +61,18 @@ public class Services {
     public Services(AutomotivePasswords sharedCred, AutomotiveData sharedData) {
         this.sharedCred = sharedCred;
         this.sharedData = sharedData;
+        currentClientUsername = sharedCred.getClientUsername();
+        if (currentClientUsername == null || currentClientUsername.trim().isEmpty()) {
+            currentClientUsername = "guest";
+        }
         currentClientName = sharedCred.getClientName();
         if (currentClientName == null || currentClientName.trim().isEmpty()) {
-            currentClientName = sharedCred.getClientUsername();
-        }
-        if (currentClientName == null || currentClientName.trim().isEmpty()) {
-            currentClientName = "Client";
+            currentClientName = currentClientUsername;
         }
 
         appointmentModel = sharedData.getAppointmentModel();
         productModel = sharedData.getProductModel();
-        cartModel = sharedData.getCartModel();
+        cartModel = sharedData.getCartModel(currentClientUsername);
         billModel = sharedData.getBillModel();
         transModel = sharedData.getTransactionModel();
 
@@ -79,13 +81,16 @@ public class Services {
         table3.setModel(cartModel);
         billingMyBillsTable.setModel(billModel);
         billingTransacRecordTable.setModel(transModel);
+        hideTableColumn(table1, 8);
+        hideTableColumn(billingMyBillsTable, 8);
+        hideTableColumn(billingTransacRecordTable, 6);
 
-        final String clientFilter = currentClientName;
+        final String clientFilter = currentClientUsername;
         TableRowSorter<DefaultTableModel> appointmentSorter = new TableRowSorter<>(appointmentModel);
         appointmentSorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
             @Override
             public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-                return clientFilter.equals(entry.getStringValue(1));
+                return clientFilter.equalsIgnoreCase(entry.getStringValue(8));
             }
         });
         table1.setRowSorter(appointmentSorter);
@@ -94,7 +99,7 @@ public class Services {
         billSorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
             @Override
             public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-                return clientFilter.equals(entry.getStringValue(1));
+                return clientFilter.equalsIgnoreCase(entry.getStringValue(8));
             }
         });
         billingMyBillsTable.setRowSorter(billSorter);
@@ -103,7 +108,7 @@ public class Services {
         transactionSorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
             @Override
             public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-                return clientFilter.equals(entry.getStringValue(2));
+                return clientFilter.equalsIgnoreCase(entry.getStringValue(6));
             }
         });
         billingTransacRecordTable.setRowSorter(transactionSorter);
@@ -221,7 +226,7 @@ public class Services {
 
                 appointmentModel.addRow(new Object[]{
                         appointmentID, currentClientName, appointment.getServiceName(), appointment.getVehicleInfo(),
-                        appointment.getServiceDetail(), schedule, "Pending", String.format("₱%.2f", estimate)
+                        appointment.getServiceDetail(), schedule, "Pending", String.format("₱%.2f", estimate), currentClientUsername
                 });
 
                 int billID = sharedData.nextBillID();
@@ -230,14 +235,14 @@ public class Services {
 
                 billModel.addRow(new Object[]{
                         billID, currentClientName, "Service", serviceName + " - " + problem + " (" + vehicle + ")",
-                        amount, "Pending", "Unpaid", billDate
+                        amount, "Pending", "Unpaid", billDate, currentClientUsername
                 });
 
                 sharedData.linkServiceBill(billID, appointmentID);
 
                 double balance = 0;
                 for (int i = 0; i < billModel.getRowCount(); i++) {
-                    if (billModel.getValueAt(i, 1).toString().equals(currentClientName)
+                    if (billModel.getValueAt(i, 8).toString().equalsIgnoreCase(currentClientUsername)
                             && billModel.getValueAt(i, 6).toString().equals("Unpaid")) {
                         String billAmount = billModel.getValueAt(i, 4).toString().replace("₱", "").replace(",", "");
                         balance += Double.parseDouble(billAmount);
@@ -321,7 +326,7 @@ public class Services {
 
                 billModel.addRow(new Object[]{
                         billID, currentClientName, "Product", "Product Order", String.format("₱%.2f", total),
-                        "Not Required", "Unpaid", new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date())
+                        "Not Required", "Unpaid", new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date()), currentClientUsername
                 });
 
                 cartModel.setRowCount(0);
@@ -329,7 +334,7 @@ public class Services {
 
                 double balance = 0;
                 for (int i = 0; i < billModel.getRowCount(); i++) {
-                    if (billModel.getValueAt(i, 1).toString().equals(currentClientName)
+                    if (billModel.getValueAt(i, 8).toString().equalsIgnoreCase(currentClientUsername)
                             && billModel.getValueAt(i, 6).toString().equals("Unpaid")) {
                         String amount = billModel.getValueAt(i, 4).toString().replace("₱", "").replace(",", "");
                         balance += Double.parseDouble(amount);
@@ -359,7 +364,7 @@ public class Services {
                 String approvalStatus = billModel.getValueAt(selectedRow, 5).toString();
                 String paymentStatus = billModel.getValueAt(selectedRow, 6).toString();
 
-                if (!clientName.equals(currentClientName)) {
+                if (!billModel.getValueAt(selectedRow, 8).toString().equalsIgnoreCase(currentClientUsername)) {
                     JOptionPane.showMessageDialog(servicesPanel, "You can only pay your own bills.");
                     return;
                 }
@@ -455,11 +460,11 @@ public class Services {
 
                     int receiptID = sharedData.nextReceiptID();
                     String paymentDate = new SimpleDateFormat("dd/MM/yyyy hh:mm a").format(new Date());
-                    transModel.addRow(new Object[]{receiptID, billNumber, clientName, amount, selectedMethod, paymentDate});
+                    transModel.addRow(new Object[]{receiptID, billNumber, clientName, amount, selectedMethod, paymentDate, currentClientUsername});
 
                     double balance = 0;
                     for (int i = 0; i < billModel.getRowCount(); i++) {
-                        if (billModel.getValueAt(i, 1).toString().equals(currentClientName)
+                        if (billModel.getValueAt(i, 8).toString().equalsIgnoreCase(currentClientUsername)
                             && billModel.getValueAt(i, 6).toString().equals("Unpaid")) {
                             String unpaidAmount = billModel.getValueAt(i, 4).toString().replace("₱", "").replace(",", "");
                             balance += Double.parseDouble(unpaidAmount);
@@ -565,4 +570,12 @@ public class Services {
     public JTabbedPane getServicesPanel() {
         return servicesPanel;
     }
+
+    private void hideTableColumn(JTable table, int modelColumn) {
+        int viewColumn = table.convertColumnIndexToView(modelColumn);
+        if (viewColumn >= 0) {
+            table.removeColumn(table.getColumnModel().getColumn(viewColumn));
+        }
+    }
+
 }
