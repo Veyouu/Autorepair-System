@@ -1,15 +1,18 @@
 import javax.swing.table.DefaultTableModel;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Vector;
 
 public class AutomotiveData {
+    private static final AutomotiveData INSTANCE = new AutomotiveData();
+
+    public static AutomotiveData getInstance() {
+        return INSTANCE;
+    }
     private final DefaultTableModel appointmentModel = new DefaultTableModel();
     private final DefaultTableModel productModel = new DefaultTableModel();
     private final DefaultTableModel billModel = new DefaultTableModel();
     private final DefaultTableModel transactionModel = new DefaultTableModel();
 
-    // Each client has a separate shopping cart.
     private final Map<String, DefaultTableModel> clientCartModels = new HashMap<>();
 
     private int appointmentCount = 0;
@@ -17,12 +20,10 @@ public class AutomotiveData {
     private int receiptCount = 0;
     private int productCount = 0;
 
-    // Connects service bills to their corresponding appointments.
     private final Map<Integer, Integer> serviceBillAppointmentIDs = new HashMap<>();
 
-    public AutomotiveData() {
+    private AutomotiveData() {
 
-        // APPOINTMENT TABLE
         appointmentModel.addColumn("ID");
         appointmentModel.addColumn("Client");
         appointmentModel.addColumn("Service");
@@ -30,17 +31,16 @@ public class AutomotiveData {
         appointmentModel.addColumn("Details");
         appointmentModel.addColumn("Schedule");
         appointmentModel.addColumn("Status");
+        appointmentModel.addColumn("Service Status");
         appointmentModel.addColumn("Estimate");
         appointmentModel.addColumn("Client Username");
 
-        // PRODUCT TABLE
         productModel.addColumn("ID");
         productModel.addColumn("Product");
         productModel.addColumn("Category");
         productModel.addColumn("Price");
         productModel.addColumn("Stock");
 
-        // BILL TABLE
         billModel.addColumn("Bill #");
         billModel.addColumn("Client");
         billModel.addColumn("Type");
@@ -51,7 +51,6 @@ public class AutomotiveData {
         billModel.addColumn("Date");
         billModel.addColumn("Client Username");
 
-        // TRANSACTION TABLE
         transactionModel.addColumn("Receipt #");
         transactionModel.addColumn("Bill #");
         transactionModel.addColumn("Client");
@@ -60,7 +59,6 @@ public class AutomotiveData {
         transactionModel.addColumn("Date");
         transactionModel.addColumn("Client Username");
 
-        // DEFAULT PRODUCT INVENTORY
         String[][] products = {
                 {"1", "Engine Oil", "Fluids", "450.00", "50"},
                 {"2", "Oil Filter", "Parts", "225.00", "40"},
@@ -85,8 +83,6 @@ public class AutomotiveData {
         }
     }
 
-    // GET TABLE MODELS
-
     public DefaultTableModel getAppointmentModel() {
         return appointmentModel;
     }
@@ -103,7 +99,6 @@ public class AutomotiveData {
         return transactionModel;
     }
 
-    // GET A CLIENT'S SHOPPING CART
 
     public synchronized DefaultTableModel getCartModel(String clientUsername) {
         String key = normalizeUsername(clientUsername);
@@ -124,39 +119,6 @@ public class AutomotiveData {
         return model;
     }
 
-    // Compatibility method for older code.
-    public DefaultTableModel getCartModel() {
-        return getCartModel("guest");
-    }
-
-    // GET VECTOR RECORDS
-
-    public Vector<Vector> getAppointmentRecords() {
-        return appointmentModel.getDataVector();
-    }
-
-    public Vector<Vector> getProductRecords() {
-        return productModel.getDataVector();
-    }
-
-    public Vector<Vector> getCartRecords(String clientUsername) {
-        return getCartModel(clientUsername).getDataVector();
-    }
-
-    public Vector<Vector> getCartRecords() {
-        return getCartModel().getDataVector();
-    }
-
-    public Vector<Vector> getBillRecords() {
-        return billModel.getDataVector();
-    }
-
-    public Vector<Vector> getTransactionRecords() {
-        return transactionModel.getDataVector();
-    }
-
-    // GENERATE AUTOMATIC ID NUMBERS
-
     public int nextAppointmentID() {
         return ++appointmentCount;
     }
@@ -173,12 +135,6 @@ public class AutomotiveData {
         return ++productCount;
     }
 
-    public void resetProductCount(int count) {
-        productCount = count;
-    }
-
-    // LINK A SERVICE BILL TO AN APPOINTMENT
-
     public void linkServiceBill(int billID, int appointmentID) {
         serviceBillAppointmentIDs.put(billID, appointmentID);
     }
@@ -187,33 +143,46 @@ public class AutomotiveData {
         return serviceBillAppointmentIDs.get(billID);
     }
 
-    // GET APPOINTMENT STATUS
+    public String getServiceStatus(int appointmentID) {
+        for(int i = 0; i <appointmentModel.getRowCount(); i++){
+            int currentID = Integer.parseInt(appointmentModel.getValueAt(i, 0).toString());
+            if (currentID == appointmentID) {
+                return appointmentModel.getValueAt(i, 7).toString();
+            }
+        }
+        return null;
+    }
 
     public String getAppointmentStatus(int appointmentID) {
         for (int i = 0; i < appointmentModel.getRowCount(); i++) {
-
-            int currentID = Integer.parseInt(
-                    appointmentModel.getValueAt(i, 0).toString()
-            );
-
+            int currentID = Integer.parseInt(appointmentModel.getValueAt(i, 0).toString());
             if (currentID == appointmentID) {
                 return appointmentModel.getValueAt(i, 6).toString();
             }
         }
-
         return null;
     }
 
-    // UPDATE APPOINTMENT AND RELATED BILL STATUS
 
-    public boolean updateAppointmentStatus(int appointmentID, String status) {
+    public boolean getServiceStatus(int appointmentID, String status){
+        boolean found = false;
+        for(int i=0; i< appointmentModel.getRowCount(); i++){
+            int currentID = Integer.parseInt(appointmentModel.getValueAt(i, 0).toString());
+            if(currentID == appointmentID){
+                appointmentModel.setValueAt(status, i, 7);
+                found = true;
+                break;
+            }
+        }
+        return found;
+    }
+
+    public boolean getAppointmentStatus(int appointmentID, String status) {
         boolean found = false;
 
         for (int i = 0; i < appointmentModel.getRowCount(); i++) {
 
-            int currentID = Integer.parseInt(
-                    appointmentModel.getValueAt(i, 0).toString()
-            );
+            int currentID = Integer.parseInt(appointmentModel.getValueAt(i, 0).toString());
 
             if (currentID == appointmentID) {
                 appointmentModel.setValueAt(status, i, 6);
@@ -222,7 +191,6 @@ public class AutomotiveData {
             }
         }
 
-        // Update the approval status of the associated service bill.
         if (found) {
             for (int i = 0; i < billModel.getRowCount(); i++) {
 
@@ -248,8 +216,6 @@ public class AutomotiveData {
 
         return found;
     }
-
-    // NORMALIZE USERNAME TO KEEP ACCOUNT IDENTIFICATION CONSISTENT
 
     private String normalizeUsername(String username) {
         if (username == null || username.trim().isEmpty()) {
