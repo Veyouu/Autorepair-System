@@ -29,7 +29,7 @@ public final class StoreAccounts {
                 return true;
             }
         }
-            return false;
+        return false;
     }
     public boolean validClient(String inputUser, String inputPass) {
         for(int rowSearch = 0; rowSearch<clients.getRowCount(); rowSearch++){
