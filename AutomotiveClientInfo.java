@@ -65,7 +65,6 @@ public class AutomotiveClientInfo {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-
                     JFrame loginFrame = new JFrame("Login");
                     AutomotiveServiceLogin loginPanel = new AutomotiveServiceLogin();
                     JPanel panel = loginPanel.getMainPanel();
