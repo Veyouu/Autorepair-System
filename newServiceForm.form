@@ -109,7 +109,7 @@
                       <text value="Book an appointment"/>
                     </properties>
                   </component>
-                  <grid id="e10f0" layout-manager="GridLayoutManager" row-count="4" column-count="3" same-size-horizontally="true" same-size-vertically="false" hgap="10" vgap="10">
+                  <grid id="e10f0" layout-manager="GridLayoutManager" row-count="4" column-count="4" same-size-horizontally="false" same-size-vertically="false" hgap="10" vgap="10">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
                       <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
@@ -121,7 +121,7 @@
                     <children>
                       <component id="8960d" class="javax.swing.JLabel">
                         <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
                           <font size="13" style="1"/>
@@ -131,7 +131,7 @@
                       </component>
                       <component id="1bea6" class="javax.swing.JLabel">
                         <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
                           <font size="13" style="1"/>
@@ -141,7 +141,7 @@
                       </component>
                       <component id="f7bcb" class="javax.swing.JLabel">
                         <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
                           <font size="13" style="1"/>
@@ -149,27 +149,7 @@
                           <text value="Problem"/>
                         </properties>
                       </component>
-                      <component id="bdf69" class="javax.swing.JComboBox" binding="appointmentServiceCMB">
-                        <constraints>
-                          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <preferred-size width="160" height="38"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <font size="14"/>
-                        </properties>
-                      </component>
                       <component id="d04f3" class="javax.swing.JTextField" binding="appointmentVehicleTXT">
-                        <constraints>
-                          <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <preferred-size width="160" height="38"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <font size="14"/>
-                        </properties>
-                      </component>
-                      <component id="116f8" class="javax.swing.JComboBox" binding="appointmentProblemCMB">
                         <constraints>
                           <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <preferred-size width="160" height="38"/>
@@ -179,9 +159,19 @@
                           <font size="14"/>
                         </properties>
                       </component>
+                      <component id="116f8" class="javax.swing.JComboBox" binding="appointmentProblemCMB">
+                        <constraints>
+                          <grid row="1" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                            <preferred-size width="160" height="38"/>
+                          </grid>
+                        </constraints>
+                        <properties>
+                          <font size="14"/>
+                        </properties>
+                      </component>
                       <component id="47d18" class="javax.swing.JLabel">
                         <constraints>
-                          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                          <grid row="2" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
                           <font size="13" style="1"/>
@@ -191,7 +181,7 @@
                       </component>
                       <component id="517bd" class="javax.swing.JLabel">
                         <constraints>
-                          <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                          <grid row="2" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
                           <font size="13" style="1"/>
@@ -201,7 +191,7 @@
                       </component>
                       <component id="d3720" class="javax.swing.JSpinner" binding="appointmentDateSPN">
                         <constraints>
-                          <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                          <grid row="3" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <preferred-size width="160" height="38"/>
                           </grid>
                         </constraints>
@@ -211,7 +201,7 @@
                       </component>
                       <component id="5dc5a" class="javax.swing.JSpinner" binding="appointmentTimeSPN">
                         <constraints>
-                          <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                          <grid row="3" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <preferred-size width="160" height="38"/>
                           </grid>
                         </constraints>
@@ -221,7 +211,7 @@
                       </component>
                       <component id="b133e" class="javax.swing.JButton" binding="appointmentSubmitAppBT">
                         <constraints>
-                          <grid row="3" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                          <grid row="3" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false">
                             <preferred-size width="-1" height="44"/>
                           </grid>
                         </constraints>
@@ -230,6 +220,22 @@
                           <font size="14" style="1"/>
                           <foreground color="-1"/>
                           <text value="Submit Appointment"/>
+                        </properties>
+                      </component>
+                      <component id="f4318" class="javax.swing.JRadioButton" binding="repairServicesRadioButton" default-binding="true">
+                        <constraints>
+                          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties>
+                          <text value="Repair Services"/>
+                        </properties>
+                      </component>
+                      <component id="95cb9" class="javax.swing.JRadioButton" binding="installationServicesRadioButton" default-binding="true">
+                        <constraints>
+                          <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties>
+                          <text value="Installation Services"/>
                         </properties>
                       </component>
                     </children>
@@ -634,34 +640,54 @@
                       </component>
                     </children>
                   </scrollpane>
-                  <grid id="5c2bb" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="10" vgap="10">
+                  <grid id="5c2bb" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="8" vgap="6">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
-                      <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="7" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                      <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                        <preferred-size width="-1" height="180"/>
+                      </grid>
                     </constraints>
                     <properties>
                       <background color="-1"/>
                     </properties>
                     <border type="none"/>
                     <children>
+                      <component id="a9b01" class="javax.swing.JLabel">
+                        <constraints>
+                          <grid row="0" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties>
+                          <font size="13" style="1"/>
+                          <foreground color="-15261645"/>
+                          <text value="Billing Review"/>
+                        </properties>
+                      </component>
                       <component id="57d5d" class="javax.swing.JButton" binding="billingViewRecieptBT">
                         <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false">
-                            <preferred-size width="-1" height="44"/>
+                          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                            <preferred-size width="140" height="36"/>
                           </grid>
                         </constraints>
                         <properties>
                           <background color="-1511173"/>
-                          <font size="14" style="1"/>
+                          <font size="13" style="1"/>
                           <foreground color="-15444320"/>
                           <text value="View Receipt"/>
                         </properties>
                       </component>
-                      <hspacer id="3f216">
+                      <scrollpane id="67d86">
                         <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                         </constraints>
-                      </hspacer>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="4548d" class="javax.swing.JTextArea" binding="billingTXTArea">
+                            <constraints/>
+                            <properties/>
+                          </component>
+                        </children>
+                      </scrollpane>
                     </children>
                   </grid>
                 </children>
